@@ -6,7 +6,10 @@ namespace fast_json_oim
 {
     internal class Program
     {
-        private static readonly string WatchFolder = @"C:\IMPORTACIONS-OIM";
+        private static readonly string WatchFolder = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "IMPORTACIONS-OIM");
+
         private static readonly string OutputFolder = Path.Combine(WatchFolder, "JsonFiles");
 
         static void Main(string[] args)
@@ -62,10 +65,32 @@ namespace fast_json_oim
                     // ✅ espera o arquivo estar pronto (parar de ser copiado)
                     FileProcessor.WaitUntilFileIsReady(filePath);
 
+                    var baseName = Path.GetFileNameWithoutExtension(filePath);
+
+                    if (string.Equals(baseName, "BAIXAS-AP", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var baixasNumbers = FileProcessor.ReadBaixasApPolicyNumbers(filePath);
+                        var baixasOutputFolder = Path.Combine(OutputFolder, "BAIXAS");
+                        Directory.CreateDirectory(baixasOutputFolder);
+
+                        var baixasPolicyFiles = GenerationJsonBuilder.BuildBaixasApPolicyJsonFiles(baixasNumbers);
+                        for (int i = 0; i < baixasPolicyFiles.Count; i++)
+                        {
+                            var (json, count, fileIndex) = baixasPolicyFiles[i];
+                            var fileName = baixasPolicyFiles.Count > 1
+                                ? $"generation_policies_{baseName}_part{fileIndex:D3}.json"
+                                : $"generation_policies_{baseName}.json";
+                            var outputPath = Path.Combine(baixasOutputFolder, fileName);
+                            File.WriteAllText(outputPath, json);
+                            Console.WriteLine($"✅ BAIXAS-AP Policies JSON #{fileIndex} generated: {count} items");
+                            Console.WriteLine(outputPath);
+                        }
+
+                        return;
+                    }
+
                     // ✅ extrai as 2 listas (Policies e Endossos)
                     var (policies, endorsements) = FileProcessor.ExtractPoliciesAndEndorsements(filePath);
-
-                    var baseName = Path.GetFileNameWithoutExtension(filePath);
 
                     // ✅ gera múltiplos arquivos JSON para Policies (divididos por MaxPolicyNumbers)
                     var policyJsonFiles = GenerationJsonBuilder.BuildMultiplePolicyJsonFiles(policies);

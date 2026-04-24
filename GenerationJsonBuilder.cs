@@ -137,6 +137,61 @@ namespace fast_json_oim
             return results;
         }
 
+        private static readonly List<string> BaixasApServices = new() { "parc02", "cms02" };
+
+        /// <summary>
+        /// Fluxo BAIXAS-AP: lotes de até 5000 apólices, Services parc02/cms02, LotSize 300.
+        /// </summary>
+        public static List<(string Json, int PolicyCount, int FileIndex)> BuildBaixasApPolicyJsonFiles(
+            List<string> policyNumbers)
+        {
+            const int maxPerChunk = 5000;
+            const int lotSize = 300;
+
+            var results = new List<(string Json, int PolicyCount, int FileIndex)>();
+            if (policyNumbers.Count == 0)
+                return results;
+
+            var (startDate, endDate) = GetCurrentMonthRange();
+            int totalFiles = (int)Math.Ceiling((double)policyNumbers.Count / maxPerChunk);
+
+            Console.WriteLine(
+                $"📦 BAIXAS-AP: {policyNumbers.Count} apólice(s) em {totalFiles} arquivo(s) (máx. {maxPerChunk} por arquivo, LotSize={lotSize})");
+
+            for (int i = 0; i < totalFiles; i++)
+            {
+                var batch = policyNumbers.Skip(i * maxPerChunk).Take(maxPerChunk).ToList();
+
+                var payload = new Root
+                {
+                    Generations = new List<Generation>
+                    {
+                        new Generation
+                        {
+                            Description = "Policy files generation - BAIXAS-AP",
+                            Services = new List<string>(BaixasApServices),
+                            StartDate = startDate,
+                            EndDate = endDate,
+                            PolicyNumbers = batch,
+                            ClaimNumbers = new List<string>(),
+                            TreatyCodes = new List<string>(),
+                            BorderauxNumbers = new List<string>(),
+                            EndorsementNumbers = new List<string>(),
+                            PolicyNumbersNotExported = new List<string>(),
+                            OutputDirectory = @"\\itgappprod\ITG_Arquivos\OIMx\_FilaDeProcessamento\",
+                            PorItem = false,
+                            LotSize = lotSize
+                        }
+                    }
+                };
+
+                var json = Serialize(payload);
+                results.Add((json, batch.Count, i + 1));
+            }
+
+            return results;
+        }
+
         public static string BuildEndorsementJson(List<string> endorsementNumbers)
         {
             var (startDate, endDate) = GetCurrentMonthRange();

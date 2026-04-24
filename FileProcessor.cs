@@ -63,6 +63,17 @@ namespace fast_json_oim
             return (policies.ToList(), endorsements.ToList());
         }
 
+        /// <summary>
+        /// TXT do fluxo BAIXAS-AP: um número de apólice por linha (sem tab).
+        /// </summary>
+        public static List<string> ReadBaixasApPolicyNumbers(string filePath)
+        {
+            return File.ReadLines(filePath)
+                .Select(line => line.Trim())
+                .Where(line => line.Length > 0)
+                .ToList();
+        }
+
         // ✅ garante que o sufixo tem exatamente 6 dígitos
         private static string NormalizeSixDigits(string value)
         {
